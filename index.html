@@ -9,6 +9,8 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -45,6 +47,10 @@
         </div>
       </header>
 
+      <section class="cloud-bar" aria-label="Cloud sync account">
+        <div class="cloud-status"><span id="cloud-dot" class="cloud-dot"></span><div><strong id="cloud-status-title">Device-only mode</strong><small id="cloud-status-detail">Sign in to sync across your devices</small></div></div>
+        <div id="auth-actions" class="auth-actions"><button id="auth-open" class="quiet-button">Sign in / Create account</button></div>
+      </section>
       <section id="view-today" class="view">
         <div class="greeting-row">
           <div>
@@ -134,6 +140,16 @@
       <label>Habit name<input id="habit-title" required maxlength="70" placeholder="e.g. Read for 20 minutes"></label>
       <label>Emoji <input id="habit-emoji" maxlength="4" value="✦" placeholder="✦"></label>
       <div class="modal-actions"><button type="button" class="quiet-button" data-close="habit-dialog">Cancel</button><button type="submit" class="primary-button">Save habit</button></div>
+    </form>
+  </dialog>
+  <dialog id="auth-dialog" class="modal auth-modal">
+    <form id="auth-form">
+      <div class="modal-heading"><div><p class="eyebrow">DAYBOOK CLOUD</p><h2 id="auth-heading">Sign in</h2></div><button type="button" class="modal-close" data-close="auth-dialog">×</button></div>
+      <p class="auth-help">Use the same account on your laptop and phone to share your tasks, time blocks, and habits.</p>
+      <label>Email<input id="auth-email" type="email" autocomplete="email" required placeholder="you@example.com"></label>
+      <label>Password<input id="auth-password" type="password" autocomplete="current-password" minlength="6" required placeholder="At least 6 characters"></label>
+      <p id="auth-error" class="auth-error" role="alert"></p>
+      <div class="modal-actions auth-modal-actions"><button type="button" id="auth-switch" class="text-button">Create an account</button><button type="submit" id="auth-submit" class="primary-button">Sign in</button></div>
     </form>
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

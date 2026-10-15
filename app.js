@@ -29,7 +29,89 @@
   try { data = JSON.parse(localStorage.getItem('daybook-data')) || seed; } catch { data = seed; }
   if (!data.tasks || !data.blocks || !data.habits) data = seed;
   let selectedDate = todayISO(), currentView = 'today', taskFilter = 'all';
-  const persist = () => { localStorage.setItem('daybook-data', JSON.stringify(data)); updateNavCount(); };
+  let cloudClient = null, cloudUser = null, syncTimer = null, applyingCloud = false, authMode = 'signin', authBusy = false;
+  const config = window.DAYBOOK_CONFIG || {};
+  const cloudConfigured = !!(window.supabase && config.supabaseUrl && config.supabasePublishableKey && !config.supabaseUrl.includes('PASTE_') && !config.supabasePublishableKey.includes('PASTE_'));
+  if (cloudConfigured) cloudClient = window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey);
+  const persist = () => {
+    localStorage.setItem('daybook-data', JSON.stringify(data)); updateNavCount();
+    if (cloudUser && !applyingCloud && cloudClient) {
+      clearTimeout(syncTimer);
+      syncTimer = setTimeout(() => pushCloudSnapshot(), 700);
+    }
+  };
+  const setCloudStatus = (title, detail, state='') => {
+    const dot=$('cloud-dot'); if(dot) dot.className=`cloud-dot ${state}`;
+    if($('cloud-status-title')) $('cloud-status-title').textContent=title;
+    if($('cloud-status-detail')) $('cloud-status-detail').textContent=detail;
+  };
+  const renderAuthActions = () => {
+    const actions=$('auth-actions'); if(!actions) return;
+    if(cloudUser){
+      actions.innerHTML=`<span class="auth-user-email" title="${escapeHTML(cloudUser.email||'Signed in')}">${escapeHTML(cloudUser.email||'Signed in')}</span><button id="auth-sync-now" class="quiet-button">Sync now</button><button id="auth-signout" class="quiet-button">Sign out</button>`;
+      $('auth-sync-now').addEventListener('click',()=>pushCloudSnapshot(true));
+      $('auth-signout').addEventListener('click',async()=>{if(!cloudClient)return;const {error}=await cloudClient.auth.signOut();if(error)showToast(error.message);});
+    } else {
+      actions.innerHTML='<button id="auth-open" class="quiet-button">Sign in / Create account</button>';
+      $('auth-open').addEventListener('click',openAuthDialog);
+    }
+  };
+  const openAuthDialog = () => { authMode='signin'; $('auth-heading').textContent='Sign in'; $('auth-submit').textContent='Sign in'; $('auth-switch').textContent='Create an account'; $('auth-error').textContent=''; $('auth-form').reset(); $('auth-password').autocomplete='current-password'; $('auth-dialog').showModal(); };
+  const pullCloudSnapshot = async () => {
+    if(!cloudClient || !cloudUser) return;
+    const {data:row,error}=await cloudClient.from('daybook_snapshots').select('data,updated_at').eq('user_id',cloudUser.id).maybeSingle();
+    if(error) throw error;
+    if(row && row.data && Array.isArray(row.data.tasks) && Array.isArray(row.data.blocks) && Array.isArray(row.data.habits)) {
+      applyingCloud=true;
+      data={...row.data,theme:row.data.theme||data.theme||'light'};
+      localStorage.setItem('daybook-data',JSON.stringify(data)); applyingCloud=false;
+      setTheme(data.theme||'light'); render();
+      setCloudStatus('Synced to cloud',`Signed in as ${cloudUser.email||'your account'} · latest data loaded`,'online');
+      showToast('Your cloud planner is up to date');
+    } else {
+      await pushCloudSnapshot();
+    }
+  };
+  const pushCloudSnapshot = async (showMessage=false) => {
+    if(!cloudClient || !cloudUser || applyingCloud) return;
+    setCloudStatus('Syncing…','Saving your planner to Supabase','waiting');
+    const {error}=await cloudClient.from('daybook_snapshots').upsert({user_id:cloudUser.id,data,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+    if(error){setCloudStatus('Sync needs attention',error.message,'waiting');if(showMessage)showToast(`Sync failed: ${error.message}`);return;}
+    setCloudStatus('Synced to cloud',`Signed in as ${cloudUser.email||'your account'}`,'online');
+    if(showMessage)showToast('Planner synced successfully');
+  };
+  const handleAuthState = async (session) => {
+    cloudUser=session?.user||null; renderAuthActions();
+    if(!cloudConfigured){setCloudStatus('Device-only mode','Add your Supabase URL and publishable key to config.js');return;}
+    if(!cloudUser){setCloudStatus('Not signed in','Your data is saved on this device');return;}
+    setCloudStatus('Connecting to cloud','Loading your planner…','waiting');
+    try { await pullCloudSnapshot(); } catch(err) { setCloudStatus('Cloud sync error',err.message||'Check your Supabase setup','waiting'); showToast('Cloud sync could not load. Check setup.'); }
+  };
+  const initCloud = async () => {
+    if(!cloudConfigured){setCloudStatus('Device-only mode','Set up config.js to enable cross-device sync');renderAuthActions();return;}
+    setCloudStatus('Connecting…','Checking your account','waiting');
+    const {data:{session},error}=await cloudClient.auth.getSession();
+    if(error){setCloudStatus('Connection issue',error.message,'waiting');return;}
+    await handleAuthState(session);
+    cloudClient.auth.onAuthStateChange((event,sessionNow)=>{
+      if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='TOKEN_REFRESHED') setTimeout(()=>handleAuthState(sessionNow),0);
+    });
+  };
+  const authForm=$('auth-form');
+  authForm.addEventListener('submit',async e=>{
+    e.preventDefault(); if(authBusy)return;
+    if(!cloudConfigured){$('auth-error').textContent='Add your Supabase URL and publishable key to config.js first.';return;}
+    authBusy=true; $('auth-submit').disabled=true; $('auth-error').textContent='';
+    const email=$('auth-email').value.trim(),password=$('auth-password').value;
+    try {
+      const result=authMode==='signup' ? await cloudClient.auth.signUp({email,password}) : await cloudClient.auth.signInWithPassword({email,password});
+      if(result.error) throw result.error;
+      if(authMode==='signup' && !result.data.session){$('auth-error').textContent='Account created. Check your email to confirm it, then sign in here.';return;}
+      $('auth-dialog').close(); showToast(authMode==='signup'?'Account created':'Signed in');
+    } catch(err) {$('auth-error').textContent=err.message||'Could not sign in. Please try again.';}
+    finally {authBusy=false;$('auth-submit').disabled=false;}
+  });
+  $('auth-switch').addEventListener('click',()=>{authMode=authMode==='signin'?'signup':'signin';$('auth-heading').textContent=authMode==='signup'?'Create account':'Sign in';$('auth-submit').textContent=authMode==='signup'?'Create account':'Sign in';$('auth-switch').textContent=authMode==='signup'?'I already have an account':'Create an account';$('auth-password').autocomplete=authMode==='signup'?'new-password':'current-password';$('auth-error').textContent='';});
   const showToast = (message) => { const el=$('toast'); el.textContent=message; el.classList.add('show'); clearTimeout(showToast.timer); showToast.timer=setTimeout(()=>el.classList.remove('show'),2200); };
   const updateNavCount = () => $('task-nav-count').textContent = data.tasks.filter(t=>!t.done).length;
   const setTheme = (theme) => { data.theme=theme; document.body.classList.toggle('dark',theme==='dark'); $('theme-label').textContent=theme==='dark'?'Light mode':'Dark mode'; $('theme-icon').textContent=theme==='dark'?'☀':'☾'; $('mobile-theme').textContent=theme==='dark'?'☀':'☾'; persist(); };
@@ -117,4 +199,5 @@
   setTheme(data.theme||'light');
   if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(()=>{});
   render();
+  initCloud();
 })();
