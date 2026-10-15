@@ -33,17 +33,29 @@
   const config = window.DAYBOOK_CONFIG || {};
   const cloudConfigured = !!(window.supabase && config.supabaseUrl && config.supabasePublishableKey && !config.supabaseUrl.includes('PASTE_') && !config.supabasePublishableKey.includes('PASTE_'));
   if (cloudConfigured) cloudClient = window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey);
+  const setLocalSaveLabel = (label, state='') => {
+    const text=$('local-save-label'), dot=$('local-save-dot');
+    if(text) text.textContent=label;
+    if(dot) dot.className=`status-dot ${state}`;
+  };
   const persist = () => {
     localStorage.setItem('daybook-data', JSON.stringify(data)); updateNavCount();
     if (cloudUser && !applyingCloud && cloudClient) {
+      setLocalSaveLabel('Saved locally · syncing to cloud', 'syncing');
       clearTimeout(syncTimer);
       syncTimer = setTimeout(() => pushCloudSnapshot(), 700);
+    } else {
+      setLocalSaveLabel('Saved on this device');
     }
   };
   const setCloudStatus = (title, detail, state='') => {
     const dot=$('cloud-dot'); if(dot) dot.className=`cloud-dot ${state}`;
     if($('cloud-status-title')) $('cloud-status-title').textContent=title;
     if($('cloud-status-detail')) $('cloud-status-detail').textContent=detail;
+    if(title==='Synced to cloud') setLocalSaveLabel('Cloud sync is up to date', 'online');
+    else if(title==='Syncing…' || title==='Connecting to cloud') setLocalSaveLabel('Saved locally · syncing to cloud', 'syncing');
+    else if(title==='Cloud sync error' || title==='Sync needs attention' || title==='Connection issue') setLocalSaveLabel('Saved locally · cloud sync needs attention', 'syncing');
+    else setLocalSaveLabel('Saved on this device');
   };
   const renderAuthActions = () => {
     const actions=$('auth-actions'); if(!actions) return;
