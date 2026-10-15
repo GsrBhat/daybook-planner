@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7fb">
+  <meta name="description" content="A personal planner for your day, tasks, timetable, and habits.">
+  <title>Daybook — Personal Planner</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="Daybook home">
+        <span class="brand-mark">d</span><span>daybook</span>
+      </a>
+      <div class="workspace-label">YOUR SPACE</div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="today"><span>◷</span> Today</button>
+        <button class="nav-item" data-view="week"><span>▦</span> Weekly planner</button>
+        <button class="nav-item" data-view="tasks"><span>✓</span> All tasks <span id="task-nav-count" class="nav-count">0</span></button>
+        <button class="nav-item" data-view="habits"><span>✳</span> Habits</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="mini-card">
+          <div class="mini-card-icon">✦</div>
+          <strong>Make room for what matters.</strong>
+          <p>A little structure goes a long way.</p>
+        </div>
+        <button id="theme-toggle" class="theme-toggle"><span id="theme-icon">☾</span><span id="theme-label">Dark mode</span></button>
+        <div class="local-note"><span class="status-dot"></span> Saved on this device</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="brand-mark">d</span> daybook</div>
+        <div class="breadcrumb"><span>My workspace</span><span class="crumb-slash">/</span><strong id="breadcrumb-current">Today</strong></div>
+        <div class="top-actions">
+          <button id="today-button" class="quiet-button">Today</button>
+          <button id="add-task-top" class="primary-button"><span>＋</span> Add task</button>
+          <button id="mobile-theme" class="icon-button" aria-label="Toggle theme">☾</button>
+        </div>
+      </header>
+
+      <section id="view-today" class="view">
+        <div class="greeting-row">
+          <div>
+            <p class="eyebrow" id="date-label">YOUR DAY</p>
+            <h1 id="greeting">Make today count<span class="title-period">.</span></h1>
+            <p class="subheading">A clear plan makes space for your best work.</p>
+          </div>
+          <div class="date-control">
+            <button id="prev-day" class="round-button" aria-label="Previous day">‹</button>
+            <button id="date-picker-button" class="date-display"><span id="selected-date-label">Today</span><span>▾</span></button>
+            <input id="date-picker" type="date" aria-label="Choose date">
+            <button id="next-day" class="round-button" aria-label="Next day">›</button>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">Tasks completed</span><span class="stat-icon lavender">✓</span></div><div class="stat-number"><span id="completed-stat">0</span><small id="total-stat">/ 0</small></div><div class="stat-foot"><div class="progress-track"><div id="task-progress" class="progress-fill"></div></div><span id="task-progress-label">0%</span></div></article>
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">Planned focus</span><span class="stat-icon peach">◷</span></div><div class="stat-number"><span id="focus-stat">0</span><small> hrs</small></div><div class="stat-caption">From your scheduled blocks</div></article>
+          <article class="stat-card"><div class="stat-top"><span class="stat-label">Habits checked</span><span class="stat-icon mint">✳</span></div><div class="stat-number"><span id="habit-stat">0</span><small> today</small></div><div class="stat-caption" id="habit-caption">Build consistency, one day at a time</div></article>
+        </div>
+
+        <div class="content-grid">
+          <section class="panel schedule-panel">
+            <div class="panel-heading"><div><h2>Today's schedule</h2><p>Your time, intentionally spent.</p></div><button id="add-block" class="text-button">＋ Add block</button></div>
+            <div id="schedule-list" class="schedule-list"></div>
+            <button id="add-block-bottom" class="add-row-button">＋ Add time block</button>
+          </section>
+          <section class="panel tasks-panel">
+            <div class="panel-heading"><div><h2>Top priorities</h2><p>Small steps, real progress.</p></div><button class="text-button" data-go="tasks">View all</button></div>
+            <div id="priority-list" class="priority-list"></div>
+            <button id="add-task-inline" class="add-row-button">＋ Add a task</button>
+          </section>
+        </div>
+        <section class="panel habit-strip">
+          <div class="panel-heading"><div><h2>Daily habits</h2><p>Show up for yourself.</p></div><button class="text-button" data-go="habits">Manage habits ↗</button></div>
+          <div id="today-habits" class="habit-grid"></div>
+        </section>
+      </section>
+
+      <section id="view-week" class="view hidden">
+        <div class="page-heading"><div><p class="eyebrow">PLAN AHEAD</p><h1>Weekly planner<span class="title-period">.</span></h1><p class="subheading">See the shape of your week and adjust as life changes.</p></div><div class="week-controls"><button id="prev-week" class="round-button">‹</button><span id="week-range"></span><button id="next-week" class="round-button">›</button></div></div>
+        <div class="panel week-panel"><div id="week-grid" class="week-grid"></div></div>
+      </section>
+
+      <section id="view-tasks" class="view hidden">
+        <div class="page-heading"><div><p class="eyebrow">GET IT OUT OF YOUR HEAD</p><h1>All tasks<span class="title-period">.</span></h1><p class="subheading">Capture it, prioritize it, then take the next step.</p></div><button id="add-task-page" class="primary-button">＋ Add task</button></div>
+        <div class="filter-row"><div class="filter-tabs"><button class="filter-tab active" data-filter="all">All tasks</button><button class="filter-tab" data-filter="open">To do</button><button class="filter-tab" data-filter="done">Completed</button></div><div class="search-box"><span>⌕</span><input id="task-search" type="search" placeholder="Search tasks…"></div></div>
+        <div class="panel task-table-panel"><div class="task-table-head"><span>Task</span><span>Due date</span><span>Priority</span><span>Status</span><span></span></div><div id="all-task-list"></div></div>
+      </section>
+
+      <section id="view-habits" class="view hidden">
+        <div class="page-heading"><div><p class="eyebrow">CONSISTENCY OVER INTENSITY</p><h1>Your habits<span class="title-period">.</span></h1><p class="subheading">Create routines that support the life you're building.</p></div><button id="add-habit" class="primary-button">＋ Add habit</button></div>
+        <div id="habit-management" class="habit-management"></div>
+      </section>
+      <footer class="app-footer"><span>daybook <span class="footer-dot">·</span> your day, in your hands</span><span>Private by design · Stored locally</span></footer>
+    </main>
+  </div>
+
+  <dialog id="task-dialog" class="modal">
+    <form id="task-form" method="dialog">
+      <div class="modal-heading"><div><p class="eyebrow">TASK DETAILS</p><h2 id="task-modal-title">Add a task</h2></div><button type="button" class="modal-close" data-close="task-dialog">×</button></div>
+      <input type="hidden" id="task-id">
+      <label>Task name<input id="task-title" required maxlength="120" placeholder="e.g. Revise Signals & Systems"></label>
+      <label>Notes <span class="optional">optional</span><textarea id="task-notes" rows="2" placeholder="What does done look like?"></textarea></label>
+      <div class="form-two"><label>Due date<input id="task-due" type="date"></label><label>Priority<select id="task-priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></label></div>
+      <label>Category<input id="task-category" maxlength="40" placeholder="College, placements, personal…"></label>
+      <div class="modal-actions"><button type="button" class="quiet-button" data-close="task-dialog">Cancel</button><button type="submit" class="primary-button">Save task</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="block-dialog" class="modal">
+    <form id="block-form" method="dialog">
+      <div class="modal-heading"><div><p class="eyebrow">TIME BLOCK</p><h2 id="block-modal-title">Add time block</h2></div><button type="button" class="modal-close" data-close="block-dialog">×</button></div>
+      <input type="hidden" id="block-id">
+      <label>Activity<input id="block-title" required maxlength="100" placeholder="e.g. Physical Design practice"></label>
+      <div class="form-two"><label>Start time<input id="block-start" type="time" required value="09:00"></label><label>End time<input id="block-end" type="time" required value="10:00"></label></div>
+      <div class="form-two"><label>Date<input id="block-date" type="date" required></label><label>Type<select id="block-type"><option value="focus">Focus</option><option value="college">College / work</option><option value="personal">Personal</option><option value="break">Break</option></select></label></div>
+      <label>Notes <span class="optional">optional</span><input id="block-notes" maxlength="140" placeholder="Optional details"></label>
+      <div class="modal-actions"><button type="button" class="quiet-button" data-close="block-dialog">Cancel</button><button type="submit" class="primary-button">Save block</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="habit-dialog" class="modal">
+    <form id="habit-form" method="dialog">
+      <div class="modal-heading"><div><p class="eyebrow">YOUR ROUTINE</p><h2 id="habit-modal-title">Add a habit</h2></div><button type="button" class="modal-close" data-close="habit-dialog">×</button></div>
+      <input type="hidden" id="habit-id">
+      <label>Habit name<input id="habit-title" required maxlength="70" placeholder="e.g. Read for 20 minutes"></label>
+      <label>Emoji <input id="habit-emoji" maxlength="4" value="✦" placeholder="✦"></label>
+      <div class="modal-actions"><button type="button" class="quiet-button" data-close="habit-dialog">Cancel</button><button type="submit" class="primary-button">Save habit</button></div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
